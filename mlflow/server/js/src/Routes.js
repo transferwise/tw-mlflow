@@ -27,7 +27,9 @@ class Routes {
     return `/compare-runs?runs=${JSON.stringify(runUuids)}&experiment=${experimentId}`;
   }
 
-  static compareRunPageRoute = "/compare-runs"
+  static compareRunPageRoute = "/compare-runs";
+
+  static loginPageRoute = "/login";
 }
 
 export default Routes;

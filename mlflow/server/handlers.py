@@ -25,6 +25,7 @@ from mlflow.protos.model_registry_pb2 import ModelRegistryService, CreateRegiste
     GetLatestVersions, CreateModelVersion, UpdateModelVersion, DeleteModelVersion, \
     GetModelVersionDetails, GetModelVersionDownloadUri, SearchModelVersions, GetModelVersionStages
 from mlflow.protos.databricks_pb2 import RESOURCE_DOES_NOT_EXIST, INVALID_PARAMETER_VALUE
+from mlflow.server.auth import api_login_required
 from mlflow.store.artifact.artifact_repository_registry import get_artifact_repository
 from mlflow.store.db.db_types import DATABASE_ENGINES
 from mlflow.tracking._model_registry.registry import ModelRegistryStoreRegistry
@@ -696,4 +697,8 @@ HANDLERS = {
     GetModelVersionDownloadUri: _get_model_version_download_uri,
     GetModelVersionStages: _get_model_version_stages,
     SearchModelVersions: _search_model_versions,
+}
+
+HANDLERS = {
+    k: api_login_required(v) for k, v in HANDLERS.items()
 }

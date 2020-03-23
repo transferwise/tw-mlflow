@@ -9,7 +9,6 @@ import {
 import RunPage from './RunPage';
 import Routes from '../Routes';
 import MetricPage from './MetricPage';
-import LoginPage from './LoginPage';
 import CompareRunPage from './CompareRunPage';
 import AppErrorBoundary from './error-boundaries/AppErrorBoundary';
 import { connect } from 'react-redux';
@@ -62,7 +61,6 @@ class App extends Component {
               <Route exact path={Routes.metricPageRoute} component={MetricPage}/>
               <Route exact path={Routes.compareRunPageRoute} component={CompareRunPage}/>
               <Route path={Routes.experimentPageSearchRoute} component={HomePage}/>
-              {/*<Route exact path={Routes.loginPageRoute} component={LoginPage}/>*/}
               {/* TODO(Zangr) see if route component can be injected here */}
               <Route exact path={modelListPageRoute} component={ModelListPage}/>
               <Route exact path={modelVersionPageRoute} component={ModelVersionPage}/>

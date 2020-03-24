@@ -23,7 +23,7 @@ models_container_server_files = package_files("mlflow/models/container")
 alembic_files = ["../mlflow/store/db_migrations/alembic.ini", "../mlflow/temporary_db_migrations_for_pre_1_users/alembic.ini"]
 
 setup(
-    name='mlflow',
+    name='tw-mlflow',
     version=version,
     packages=find_packages(exclude=['tests', 'tests.*']),
     package_data={"mlflow": js_files + models_container_server_files + alembic_files},
@@ -65,6 +65,11 @@ setup(
          'sqlserver':[
             "mlflow-dbstore",
         ],
+        'github': [
+            'Werkzeug==0.16.0',
+            'flask_login',
+            'flask_oauthlib'
+        ]
     },
     entry_points='''
         [console_scripts]

@@ -697,3 +697,10 @@ HANDLERS = {
     GetModelVersionStages: _get_model_version_stages,
     SearchModelVersions: _search_model_versions,
 }
+
+
+def make_login_required_for_handlers(login_required_decorator):
+    global HANDLERS
+    HANDLERS = {
+        k: login_required_decorator(v) for k, v in HANDLERS.items()
+    }

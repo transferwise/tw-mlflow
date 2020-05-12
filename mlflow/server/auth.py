@@ -1,10 +1,11 @@
 ### LOGIN ###
 import functools
+import logging
 import os
 from urllib.parse import urljoin
 
 import requests
-from flask import request
+from flask import request, session
 from flask_login import LoginManager, current_user, login_required
 from flask_oauthlib.client import OAuth
 
@@ -14,6 +15,9 @@ GITHUB_BASE_URL_DEFAULT = 'https://github.com'
 GITHUB_AUTHORIZE_PATH = '/login/oauth/authorize'
 GITHUB_USER_TEAMS_PATH = '/user/teams'
 GITHUB_ACCESS_TOKEN_PATH = '/login/oauth/access_token'
+
+
+_logger = logging.getLogger(__name__)
 
 
 class User:
@@ -109,6 +113,8 @@ class GithubAuth:
     def api_login_required(self, func):
         @functools.wraps(func)
         def wrapper(*args, **kwargs):
+            _logger.info(f"Attempt to access restricted functionality. Session: {session}\nCookies: {request.cookies}")
+
             if current_user.is_authenticated:
                 # Case when accessing via UI, because cookie is set
                 return func(*args, **kwargs)
@@ -127,9 +133,9 @@ class GithubAuth:
         return wrapper
 
 
-def login_required_conditional(github_auth_enabled):
+def login_required_conditional(github_auth_enabled, github_auth):
     if github_auth_enabled:
-        return login_required
+        return github_auth.api_login_required
 
     def decorator(f):
         return f

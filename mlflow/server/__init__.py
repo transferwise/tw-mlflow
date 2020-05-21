@@ -6,7 +6,7 @@ import sys
 from urllib.parse import urlparse, urljoin
 
 import requests
-from flask import Flask, send_from_directory, request, redirect, url_for, Response
+from flask import Flask, send_from_directory, request, redirect, url_for, Response, session
 from flask_login import login_user, login_required
 from flask_oauthlib.client import OAuth
 
@@ -45,8 +45,11 @@ if os.getenv(PROMETHEUS_EXPORTER_ENV_VAR):
 client_id = os.getenv('GITHUB__CLIENT_ID')
 client_secret = os.getenv('GITHUB__CLIENT_SECRET')
 whitelisted_team_ids = os.getenv('GITHUB__WHITELISTED_TEAM_IDS')
+flask_secret_key = os.getenv('FLASK__SECRET_KEY')
 
 github_auth_enabled = client_id and client_secret and whitelisted_team_ids
+github_auth = None
+
 
 if github_auth_enabled:
     # In this case we activate github auth
@@ -54,13 +57,17 @@ if github_auth_enabled:
 
     whitelisted_team_ids = list(map(int, whitelisted_team_ids.split(";")))
 
-    github_auth = GithubAuth(app, whitelisted_team_ids, client_id, client_secret)
+    if flask_secret_key:
+        _logger.info("Flask secret key is provided")
+
+    github_auth = GithubAuth(app, whitelisted_team_ids, client_id, client_secret, secret_key=flask_secret_key)
 
     @app.route('/login/callback')
     def login_callback():
         _logger.info("/login/callback")
         next_url = request.args.get('state') or '/'
         _logger.info(f"Next url: {next_url}, request.args: {request.args}")
+        _logger.info(f"Session: {session}\nCookies: {request.cookies}")
 
         response = github_auth.github_oauth.authorized_response()
         access_token = response['access_token']
@@ -69,7 +76,8 @@ if github_auth_enabled:
             return "Access denied."
 
         # Sets the cookie in the browser
-        login_user(User(1))
+        login_user(User(1), remember=True)
+
         return redirect(next_url)
 
     @app.route('/login')
@@ -80,7 +88,7 @@ if github_auth_enabled:
     def login_authorize():
         url_parse = urlparse(request.base_url)
         callback = urljoin(f"{url_parse.scheme}://{url_parse.netloc}", '/login/callback')
-        print(f"Passing state to authorize: {request.args.get('next')}, request.args: {request.args}, callback: {callback}")
+        _logger.info(f"Passing state to authorize: {request.args.get('next')}, request.args: {request.args}, callback: {callback}")
         return github_auth.github_oauth.authorize(callback=callback, state=request.args.get('next'))
 
     make_login_required_for_handlers(github_auth.api_login_required)
@@ -107,7 +115,7 @@ def serve_static_file(path):
 
 # Serve the index.html for the React App for all other routes.
 @app.route(_add_static_prefix('/'))
-@login_required_conditional(github_auth_enabled)
+@login_required_conditional(github_auth_enabled, github_auth)
 def serve():
     print("Call from the /, request", request.args)
     return send_from_directory(STATIC_DIR, 'index.html')

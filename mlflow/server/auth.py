@@ -5,10 +5,10 @@ import os
 from urllib.parse import urljoin
 
 import requests
-from flask import request, session
-from flask_login import LoginManager, current_user, login_required
+from flask import request
+from flask_login import LoginManager
+from flask_login.utils import _get_user
 from flask_oauthlib.client import OAuth
-
 
 GITHUB_API_BASE_URL_DEFAULT = 'https://api.github.com'
 GITHUB_BASE_URL_DEFAULT = 'https://github.com'
@@ -113,9 +113,9 @@ class GithubAuth:
     def api_login_required(self, func):
         @functools.wraps(func)
         def wrapper(*args, **kwargs):
-            _logger.info(f"Attempt to access restricted functionality. Session: {session}\nCookies: {request.cookies}")
+            user = _get_user()
 
-            if current_user.is_authenticated:
+            if user.is_authenticated:
                 # Case when accessing via UI, because cookie is set
                 return func(*args, **kwargs)
 

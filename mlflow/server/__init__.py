@@ -45,6 +45,7 @@ if os.getenv(PROMETHEUS_EXPORTER_ENV_VAR):
 client_id = os.getenv('GITHUB__CLIENT_ID')
 client_secret = os.getenv('GITHUB__CLIENT_SECRET')
 whitelisted_team_ids = os.getenv('GITHUB__WHITELISTED_TEAM_IDS')
+flask_secret_key = os.getenv('FLASK__SECRET_KEY')
 
 github_auth_enabled = client_id and client_secret and whitelisted_team_ids
 github_auth = None
@@ -56,7 +57,10 @@ if github_auth_enabled:
 
     whitelisted_team_ids = list(map(int, whitelisted_team_ids.split(";")))
 
-    github_auth = GithubAuth(app, whitelisted_team_ids, client_id, client_secret)
+    if flask_secret_key:
+        _logger.info("Flask secret key is provided")
+
+    github_auth = GithubAuth(app, whitelisted_team_ids, client_id, client_secret, secret_key=flask_secret_key)
 
     @app.route('/login/callback')
     def login_callback():

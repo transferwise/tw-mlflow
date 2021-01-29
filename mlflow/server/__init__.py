@@ -1,9 +1,12 @@
+import logging
 import os
 import shlex
 import sys
 import textwrap
 
-from flask import Flask, send_from_directory, Response
+from urllib.parse import urlparse, urljoin
+from flask import Flask, send_from_directory, request, redirect, Response, session
+from flask_login import login_user
 
 from mlflow.server import handlers
 from mlflow.server.handlers import (
@@ -13,6 +16,12 @@ from mlflow.server.handlers import (
     get_model_version_artifact_handler,
 )
 from mlflow.utils.process import exec_cmd
+
+from mlflow.server.auth import GithubAuth, User, login_required_conditional
+from mlflow.server.handlers import get_artifact_handler, STATIC_PREFIX_ENV_VAR, _add_static_prefix, \
+    make_login_required_for_handlers
+
+_logger = logging.getLogger(__name__)
 
 # NB: These are intenrnal environment variables used for communication between
 # the cli and the forked gunicorn processes.
@@ -44,6 +53,58 @@ def health():
     return "OK", 200
 
 
+client_id = os.getenv('GITHUB__CLIENT_ID')
+client_secret = os.getenv('GITHUB__CLIENT_SECRET')
+whitelisted_team_ids = os.getenv('GITHUB__WHITELISTED_TEAM_IDS')
+flask_secret_key = os.getenv('FLASK__SECRET_KEY')
+
+github_auth_enabled = client_id and client_secret and whitelisted_team_ids
+github_auth = None
+
+
+if github_auth_enabled:
+    # In this case we activate github auth
+    _logger.info(f"Enabling github authentication with the following whitelisted team IDs: {whitelisted_team_ids}.")
+
+    whitelisted_team_ids = list(map(int, whitelisted_team_ids.split(";")))
+
+    if flask_secret_key:
+        _logger.info("Flask secret key is provided")
+
+    github_auth = GithubAuth(app, whitelisted_team_ids, client_id, client_secret, secret_key=flask_secret_key)
+
+    @app.route('/login/callback')
+    def login_callback():
+        _logger.info("/login/callback")
+        next_url = request.args.get('state') or '/'
+        _logger.info(f"Next url: {next_url}, request.args: {request.args}")
+        _logger.info(f"Session: {session}\nCookies: {request.cookies}")
+
+        response = github_auth.github_oauth.authorized_response()
+        access_token = response['access_token']
+
+        if not github_auth.has_valid_permissions(access_token):
+            return "Access denied."
+
+        # Sets the cookie in the browser
+        login_user(User(1), remember=True)
+
+        return redirect(next_url)
+
+    @app.route('/login')
+    def login():
+        return "<a href='/login/authorize?next={}'> <h1> Login via Github </h1> </a>".format(request.args.get('next', None))
+
+    @app.route('/login/authorize')
+    def login_authorize():
+        url_parse = urlparse(request.base_url)
+        callback = urljoin(f"{url_parse.scheme}://{url_parse.netloc}", '/login/callback')
+        _logger.info(f"Passing state to authorize: {request.args.get('next')}, request.args: {request.args}, callback: {callback}")
+        return github_auth.github_oauth.authorize(callback=callback, state=request.args.get('next'))
+
+    make_login_required_for_handlers(github_auth.api_login_required)
+
+
 # Serve the "get-artifact" route.
 @app.route(_add_static_prefix("/get-artifact"))
 def serve_artifacts():
@@ -65,6 +126,7 @@ def serve_static_file(path):
 
 # Serve the index.html for the React App for all other routes.
 @app.route(_add_static_prefix("/"))
+@login_required_conditional(github_auth_enabled, github_auth)
 def serve():
     if os.path.exists(os.path.join(STATIC_DIR, "index.html")):
         return send_from_directory(STATIC_DIR, "index.html")

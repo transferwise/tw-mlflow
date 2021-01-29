@@ -879,3 +879,10 @@ HANDLERS = {
     SetModelVersionTag: _set_model_version_tag,
     DeleteModelVersionTag: _delete_model_version_tag,
 }
+
+
+def make_login_required_for_handlers(login_required_decorator):
+    global HANDLERS
+    HANDLERS = {
+        k: login_required_decorator(v) for k, v in HANDLERS.items()
+    }

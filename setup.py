@@ -45,6 +45,11 @@ SKINNY_REQUIREMENTS = [
     "protobuf>=3.6.0",
     "pytz",
     "requests>=2.17.3",
+    "Werkzeug",
+    "flask_login",
+    "flask_oauthlib",
+    "boto3",
+    "psycopg2-binary"
 ]
 
 """
@@ -75,7 +80,7 @@ _is_mlflow_skinny = bool(os.environ.get(_MLFLOW_SKINNY_ENV_VAR))
 logging.debug("{} env var is set: {}".format(_MLFLOW_SKINNY_ENV_VAR, _is_mlflow_skinny))
 
 setup(
-    name="mlflow",
+    name="tw-mlflow",
     version=version,
     packages=find_packages(exclude=["tests", "tests.*"]),
     package_data={"mlflow": js_files + models_container_server_files + alembic_files},
@@ -98,7 +103,7 @@ setup(
             "kubernetes",
         ],
         "sqlserver": ["mlflow-dbstore"],
-        "aliyun-oss": ["aliyunstoreplugin"],
+        "aliyun-oss": ["aliyunstoreplugin"]
     },
     entry_points="""
         [console_scripts]

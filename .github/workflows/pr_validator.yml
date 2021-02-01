@@ -1,0 +1,16 @@
+name: pr-label-validation
+
+on:
+  pull_request:
+    types: [opened, labeled, unlabeled, synchronize]
+
+jobs:
+  build:
+    name: PR Validation
+    runs-on: ubuntu-latest
+    steps:
+      - name: validate PR has the correct labels
+        uses: jesusvasquez333/verify-pr-label-action@c9077bbd15caade52dc1e6ed8acd8a69a2897c5e
+        with:
+          github-token: '${{ secrets.GITHUB_TOKEN }}'
+          valid-labels: 'change:standard, change:impactful, change:emergency'
